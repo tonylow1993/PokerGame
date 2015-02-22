@@ -1,8 +1,10 @@
+import java.awt.List;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Vector;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -74,7 +76,7 @@ public class JPoker24Game implements Runnable {
 	public void leaderBoard () throws RemoteException{
 		if (currentPage instanceof LeaderBoard){
 			LeaderBoard page = (LeaderBoard)currentPage;
-			String[][] data = poker.getLeaderBoard();
+			Vector<String[]>  data = poker.getLeaderBoard();
 			for (String[] row : data){
 				page.addRow(row);
 			}
