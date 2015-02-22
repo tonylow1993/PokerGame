@@ -1,24 +1,37 @@
-import java.awt.Dimension;
-import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+
+import GUI.LeaderBoard;
+import GUI.LoginPage;
+import GUI.MenuBar;
+import GUI.RegisterPage;
+import GUI.UserProfile;
 
 
-public class JPoker24Game implements Runnable, DocumentListener {
-	private JPasswordField pwd;
-	private JTextField ac;
+public class JPoker24Game implements Runnable {
+	private JFrame frame;
+	private JPanel currentPage;
+	private JPoker poker;
+	private boolean logged;
+	private String username;
 	
 	public JPoker24Game() {
-		// TODO Auto-generated constructor stub
+		frame = new JFrame();
+		logged = false;
+		try {
+			Registry registry = LocateRegistry.getRegistry("localhost");
+			poker = (JPoker)registry.lookup("poker");
+			//wordCounter = (WordCount)Naming.lookup("WordCounter");
+		} catch(Exception e) {
+			System.err.println("Failed accessing RMI: "+e);
+		}
 	}
 
 	public static void main(String[] args) {
@@ -26,52 +39,132 @@ public class JPoker24Game implements Runnable, DocumentListener {
 	}
 	
 	public void run() {
-		JFrame frame = new JFrame("Login");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
-		JPanel panel = new JPanel();
-		JPanel buttons = new JPanel();
-		buttons.setLayout(new GridLayout(1,2));
-		panel.setBorder(BorderFactory.createTitledBorder("Login")); 
-		panel.setPreferredSize(new Dimension(400,300));
-		panel.setLayout(new GridLayout(5,1));
-		
-		JLabel l1 = new JLabel("Login Name");
-		JLabel l2 = new JLabel("Password");
-		ac = new JTextField();
-		pwd = new JPasswordField();
-		
-		JButton log = new JButton("Login");
-		JButton reg = new JButton("Register");
-		buttons.add(log);
-		buttons.add(reg);
-		
-		panel.add(l1);
-		panel.add(ac);
-		panel.add(l2);
-		panel.add(pwd);
-		panel.add(buttons);
-		
-		frame.add(panel);
-		frame.pack();
 		frame.setVisible(true);
+		changePage("login");
 	}
-
-	@Override
-	public void changedUpdate(DocumentEvent arg0) {
-		// TODO Auto-generated method stub
-		
+	
+	public void login () throws RemoteException{
+		if (currentPage instanceof LoginPage){
+			LoginPage page = (LoginPage)currentPage;
+			logged = poker.login(page.getUsername(), page.getPassword());
+			if (logged) {
+				username = page.getUsername();
+				changePage("userprofile");
+			}
+		}
 	}
-
-	@Override
-	public void insertUpdate(DocumentEvent arg0) {
-		// TODO Auto-generated method stub
-		
+	
+	public void register ()  throws RemoteException{
+		if (currentPage instanceof RegisterPage){
+			RegisterPage page = (RegisterPage)currentPage;
+			if (page.confirmPassword()){
+				poker.register(page.getUsername(), page.getPassword());
+			}
+		}
 	}
-
-	@Override
-	public void removeUpdate(DocumentEvent arg0) {
-		// TODO Auto-generated method stub
-		
+	
+	public void profile () throws RemoteException{
+		if (currentPage instanceof UserProfile){
+			UserProfile page = (UserProfile)currentPage;
+			page.displayProfile(poker.getProfile(username));
+		}
+	}
+	
+	public void leaderBoard () throws RemoteException{
+		if (currentPage instanceof LeaderBoard){
+			LeaderBoard page = (LeaderBoard)currentPage;
+			String[][] data = poker.getLeaderBoard();
+			for (String[] row : data){
+				page.addRow(row);
+			}
+		}
+	}
+	
+	public void changePage (String name){
+		if (name == "login"){
+			LoginPage page = new LoginPage();
+			currentPage = page;
+			frame.setTitle("Login");
+			frame.setContentPane(page);
+			frame.pack();
+			page.regListener(new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					try {
+						login();
+					} catch (RemoteException e1) {
+						e1.printStackTrace();
+					}
+				}
+			}, new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("register");
+				}
+			});
+		}else if (name == "register"){
+			RegisterPage page = new RegisterPage();
+			currentPage = page;
+			frame.setTitle("Register");
+			frame.setContentPane(page);
+			frame.pack();
+			page.regListener(new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					try {
+						register();
+					} catch (RemoteException e1) {
+						e1.printStackTrace();
+					}
+				}
+			}, new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("login");
+				}
+			});
+		}else if (name == "leaderboard"){
+			LeaderBoard page = new LeaderBoard();
+			currentPage = page;
+			regMenuButton(page.getMenu());
+			frame.setTitle("Leader Board");
+			frame.add(page);
+			frame.pack();
+			try {
+				leaderBoard();
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}else if (name == "userprofile"){
+			UserProfile page = new UserProfile();
+			currentPage = page;
+			regMenuButton(page.getMenu());
+			frame.setTitle("User Profile");
+			frame.pack();
+			try {
+				profile();
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void regMenuButton (MenuBar menu){
+		menu.regListener(new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("userprofile");
+				}
+			}, new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("playgame");
+				}
+			},new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("leaderboard");
+				}
+			},new ActionListener(){
+				public void actionPerformed(ActionEvent e) {
+					changePage ("login");
+					logged = false;
+					username = null;
+				}
+			});
 	}
 }
