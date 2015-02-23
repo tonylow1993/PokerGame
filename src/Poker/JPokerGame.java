@@ -1,3 +1,4 @@
+package Poker;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.Vector;
 
 
@@ -49,6 +51,7 @@ public class JPokerGame extends UnicastRemoteObject implements JPoker{
 			while ((line = br.readLine()) != null) {
 			    String[] row = line.split(" ");
 			    if (row[0] == username && row[1] == password){
+			    	//check online users
 			    	bw.write(row[0]);
 			    	return true;
 			    }
@@ -82,7 +85,6 @@ public class JPokerGame extends UnicastRemoteObject implements JPoker{
 		try {
 			br = new BufferedReader(new FileReader(userInfo));
 		} catch (FileNotFoundException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		String line;
@@ -113,6 +115,9 @@ public class JPokerGame extends UnicastRemoteObject implements JPoker{
 		try {
 			while ((line = br.readLine()) != null) {
 			    String[] row = line.split(" ");
+			    Vector<String> list = new Vector<String>(Arrays.asList(row));
+			    list.remove(1);
+			    row = list.toArray(row);
 			    data.add(row);
 			}
 		} catch (IOException e) {
